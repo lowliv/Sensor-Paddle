@@ -105,13 +105,6 @@ void get_instructions(WiFiClient client) {
   wait_for_response(client);
   if (client.available()) {
     time = atof(client.readStringUntil('/r').c_str());
-    if (time == 0) {
-      data_send(10, 1, client);
-      delay(2000);
-      client.print("Ready for next instructions!");
-      Serial.println("Ready for next instructions!");
-      get_instructions(client);
-    }
     client.print("Recieved Time");
     Serial.print("time:");
     Serial.println(time);
@@ -154,7 +147,9 @@ void data_send(float time, float freq, WiFiClient client) {
     client.print("Calibrate mode activated.");
     Serial.println("Calibrate mode activated.");
   }*/
-  while (time > 0) {
+  float count;
+  count = time;
+  while (count > 0) {
 
     Serial.println("Sending Data");
     //if (!client.connect(host, port)) {
@@ -165,66 +160,38 @@ void data_send(float time, float freq, WiFiClient client) {
 
     lsm6ds.getEvent(&accel, &gyro, &temp);
     lis3mdl.getEvent(&mag);
-
-    time = time - (1.0/freq);
+ 
+      
+    client.print(time - count);
+    
+    count = count - (1.0/freq);
+    Serial.println(count);
     Serial.println(time);
-    delay(1000/freq);
-
+    
+   
+    client.print(",");
     client.print(accel.acceleration.x);
-    client.print("*");
+    client.print(",");
     client.print(accel.acceleration.y);
-    client.print("*");
+    client.print(",");
     client.print(accel.acceleration.z);
-    client.print("*");
+    client.print(",");
     client.print(gyro.gyro.x);
-    client.print("*");
+    client.print(",");
     client.print(gyro.gyro.y);
-    client.print("*");
+    client.print(",");
     client.print(gyro.gyro.z);
-    client.print("*");
+    client.print(",");
     client.print(mag.magnetic.x);
-    client.print("*");
+    client.print(",");
     client.print(mag.magnetic.y);
-    client.print("*");
+    client.print(",");
     client.print(mag.magnetic.z);
     client.print("*");
+
+    delay(1000/freq);
   }
 } 
-/*
-void calibrate(WiFiClient client) {
-  sensors_event_t accel, gyro, mag, temp;
 
-  lsm6ds.getEvent(&accel, &gyro, &temp);
-  lis3mdl.getEvent(&mag);
-
-  client.print("Calibrate mode activated.");
-  Serial.println("Calibrate mode activated.");
-  int x = 10;
-  while (x > 0) {
-    --x;
-    Serial.println(x);
-    delay(1000);
-    client.print(accel.acceleration.x);
-    client.print("*");
-    client.print(accel.acceleration.y);
-    client.print("*");
-    client.print(accel.acceleration.z);
-    client.print("*");
-    client.print(gyro.gyro.x);
-    client.print("*");
-    client.print(gyro.gyro.y);
-    client.print("*");
-    client.print(gyro.gyro.z);
-    client.print("*");
-    client.print(mag.magnetic.x);
-    client.print("*");
-    client.print(mag.magnetic.y);
-    client.print("*");
-    client.print(mag.magnetic.z);
-    client.print("*");
-
-  }
-}
-*/
 
 
