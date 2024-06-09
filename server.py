@@ -27,6 +27,7 @@ def get_data(time, freq):
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%Y_%H:%M")
     data_file = open("data/data-" + dt_string, 'w')
+    data_file.writelines("time,accelx,accely,accelz,gyrox,gyroy,gyroz,magx,magy,magz\n")
     total = time*freq
     data_list = []
     new_entry = str(conn.recv(1024), "utf-8")
