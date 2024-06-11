@@ -131,14 +131,8 @@ void get_instructions(WiFiClient client) {
 
 void wait_for_response(WiFiClient client) {
   int maxloops = 0;
-  while (!client.available() && maxloops < 1000){
-    maxloops++;
+  while (!client.available()){
     delay(100);
-  }
-  if (maxloops == 1000) {
-    client.print("Connection timed out.");
-    Serial.println("Connection timed out.");
-    connect();
   }
 }
 
@@ -170,23 +164,23 @@ void data_send(float time, float freq, WiFiClient client) {
     
    
     client.print(",");
-    client.print(accel.acceleration.x);
+    client.print(accel.acceleration.x,6);
     client.print(",");
-    client.print(accel.acceleration.y);
+    client.print(accel.acceleration.y,6);
     client.print(",");
-    client.print(accel.acceleration.z);
+    client.print(accel.acceleration.z,6);
     client.print(",");
-    client.print(gyro.gyro.x);
+    client.print(gyro.gyro.x,6);
     client.print(",");
-    client.print(gyro.gyro.y);
+    client.print(gyro.gyro.y,6);
     client.print(",");
-    client.print(gyro.gyro.z);
+    client.print(gyro.gyro.z,6);
     client.print(",");
-    client.print(mag.magnetic.x);
+    client.print(mag.magnetic.x,6);
     client.print(",");
-    client.print(mag.magnetic.y);
+    client.print(mag.magnetic.y,6);
     client.print(",");
-    client.print(mag.magnetic.z);
+    client.print(mag.magnetic.z,6);
     client.print("*");
 
     delay(1000/freq);
