@@ -20,8 +20,8 @@ def valid_data(n):
             return True
         return False
     
-def get_data(time, freq, datadir, label):
-    data_file = open(datadir, 'a')
+def get_data(time, freq, datafile, label):
+    data_file = open(datafile, 'a')
     if label == 1:
         data_file.writelines("time,accelx,accely,accelz,gyrox,gyroy,gyroz,magx,magy,magz\n")
     data_list = []
@@ -39,12 +39,8 @@ def get_data(time, freq, datadir, label):
     data_file.writelines(fixed_data)
     data_file.close()
     
-def calibrate():
-    if os.path.isfile("data/calibration_data/accgyrodata") == True:
-        os.remove("data/calibration_data/accgyrodata")
-    if os.path.isfile("data/calibration_data/magdata") == True:
-        os.remove("data/calibration_data/magdata")
-        
+def calibrate(datadir):
+    os.mkdir(datadir)
     print ("Calibrating accelerometer and gyroscope. Keep the device completely still in one orientation and rotate it to a new orientation")
     count = 0
     time = 1
@@ -55,7 +51,7 @@ def calibrate():
         status = str(conn.recv(1024), "utf-8")
         conn.sendall(bytes(str(freq) + "\n", "utf-8"))
         count = count + 1
-        get_data(time,freq,"data/calibration_data/accgyrodata", count)
+        get_data(time,freq,datadir + "/accgyrodata", count)
         
     input("Calibrating magnetometer. Rotate the device into as many orientations as possible. (Enter anything when ready)\n")
     time = 15
@@ -63,7 +59,7 @@ def calibrate():
     conn.sendall(bytes(str(time) + "\n", "utf-8"))
     status = str(conn.recv(1024), "utf-8")
     conn.sendall(bytes(str(freq) + "\n", "utf-8"))
-    get_data(time,freq,"data/calibration_data/magdata", 1)
+    get_data(time,freq,datadir + "/magdata", 1)
 
     
 def send_info():
@@ -71,7 +67,10 @@ def send_info():
     response_list = ["yes", "Yes", "y", "Y"]
     for n in response_list:
         if calibrate_response == n:
-            calibrate()
+            now = datetime.now()
+            dt_string = now.strftime("%d-%m-%Y_%H:%M")
+            datadir = "data/calibration_data-" + dt_string
+            calibrate(datadir)
     time = int(input("How many seconds should the data be recorded?\nInput:"))
     if time == 0:
         print("Enter a bigger number")
@@ -87,9 +86,9 @@ def send_info():
     conn.sendall(bytes(str(freq) + "\n", "utf-8"))
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%Y_%H:%M")
-    datadir = "data/data" + data_string
+    datafile = "data/data" + data_string
     label = 1
-    get_data(time,freq,datadir,label)
+    get_data(time,freq,datafile,label)
     send_info()
 
 def get_status():

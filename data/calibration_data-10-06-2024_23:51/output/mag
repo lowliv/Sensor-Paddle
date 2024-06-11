@@ -1,0 +1,17 @@
+3D magnetometer calibration based on ellipsoid fitting
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The calibration equation to be implemented:
+				h_hat = M*(h_m - b) 
+Where,
+h_m   = Measured sensor data vector
+h_hat = Calibrated sensor data vector
+
+M =
+   1.7261e-02  -1.1519e-02   4.3561e-04
+   1.1934e-02   1.7942e-02   1.5170e-03
+  -1.3521e-03  -1.1220e-03   2.3908e-02
+
+b =
+   30.821
+  -16.471
+  -41.057
