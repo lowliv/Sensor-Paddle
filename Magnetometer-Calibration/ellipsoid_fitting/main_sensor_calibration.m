@@ -86,7 +86,7 @@ end
 % Sensor readings and ellipoid fit
 scatter3(x_m, y_m, z_m, 'fill', 'MarkerFaceColor', 'red'); hold on; 
 plot_ellipsoid(v); 
-title({'Before magnetometer calibration', '(Ellipsoid fit)'});
+title({'Before calibration', '(Ellipsoid fit)'});
 xlabel('X-axis'); ylabel('Y-axis'); zlabel('Z-axis');
 axis equal;
 
@@ -94,7 +94,7 @@ axis equal;
 figure;
 scatter3(x_hat, y_hat, z_hat, 'fill', 'MarkerFaceColor', 'blue'); hold on;
 plot_sphere([0,0,0]', 1);
-title({'After magnetometer calibration', '(Normalized to unit sphere)'});
+title({'After calibration', '(Normalized to unit sphere)'});
 xlabel('X-axis'); ylabel('Y-axis'); zlabel('Z-axis');
 axis equal;
 
