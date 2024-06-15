@@ -1,5 +1,3 @@
-# echo-server.py
-
 import os
 import socket
 import shutil
@@ -28,7 +26,7 @@ def get_data(time, freq, datafile, label):
     new_entry = str(conn.recv(1024), "utf-8")
     while (new_entry != 'Ready for next instructions!' and valid_data(new_entry) == True):
         TIME.sleep(1/freq)
-        time = time-(1/freq)
+        time = 0 + (1/freq)
         print(time)
         data_list.append(new_entry)
         new_entry = str(conn.recv(1024), "utf-8")
@@ -41,17 +39,29 @@ def get_data(time, freq, datafile, label):
     
 def calibrate(datadir):
     os.mkdir(datadir)
-    print ("Calibrating accelerometer and gyroscope. Keep the device completely still in one orientation and rotate it to a new orientation")
+    print ("Calibrating accelerometer. Keep the device completely still in one orientation and rotate it to a new orientation")
     count = 0
     time = 1
     freq = 5
-    while count < 6:
+    while count < 14:
         input("Is the device still? (Enter anything when ready)\n")
         conn.sendall(bytes(str(time) + "\n", "utf-8"))
         status = str(conn.recv(1024), "utf-8")
         conn.sendall(bytes(str(freq) + "\n", "utf-8"))
         count = count + 1
-        get_data(time,freq,datadir + "/accgyrodata", count)
+        get_data(time,freq,datadir + "/accdata", count)
+    
+    print ("Calibrating gyroscope. Rotate the device around an axis at a constant speed before changing the axis and rotating it at the same constant speed.")
+    count = 0
+    time = 4
+    freq = 5
+    while count < 6:
+        input("Is the device rotating? (Enter anything when ready)\n")
+        conn.sendall(bytes(str(time) + "\n", "utf-8"))
+        status = str(conn.recv(1024), "utf-8")
+        conn.sendall(bytes(str(freq) + "\n", "utf-8"))
+        count = count + 1
+        get_data(time,freq,datadir + "/gyrodata", count)
         
     input("Calibrating magnetometer. Rotate the device into as many orientations as possible. (Enter anything when ready)\n")
     time = 15

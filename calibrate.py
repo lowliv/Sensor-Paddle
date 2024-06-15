@@ -6,9 +6,9 @@ import shutil
 
 def calibrate(target_dir, sensor_type):
     if sensor_type == "accel":
-        data_path = "/accgyrodata"
+        data_path = "/accdata"
     if sensor_type == "gyro":
-        data_path = "/accgyrodata"
+        data_path = "/gyrodata"
     if sensor_type == "mag":
         data_path = "/magdata"
     PATH =  os.path.dirname(os.path.abspath(__file__))       
@@ -42,7 +42,10 @@ elif args_count < 2:
 if not os.path.isdir(str(sys.argv[1])):
     print("The target directory doesn't exist")
     raise SystemExit(1)
-if not os.path.isfile(str(sys.argv[1]) + "accgyrodata"):
+if not os.path.isfile(str(sys.argv[1]) + "accdata"):
+    print ("The target directory is missing the accgyrodata file")
+    raise SystemExit(1)
+if not os.path.isfile(str(sys.argv[1]) + "gyrodata"):
     print ("The target directory is missing the accgyrodata file")
     raise SystemExit(1)
 if not os.path.isfile(str(sys.argv[1]) + "magdata"):

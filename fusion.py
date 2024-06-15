@@ -2,17 +2,88 @@ import imufusion
 import matplotlib.pyplot as pyplot
 import numpy
 import sys
+import os
 
-# Import sensor data
-data = numpy.genfromtxt("sensor_data.csv", delimiter=",", skip_header=1)
+def datato_listarray(matrix,length):    
+    for n in range(length):
+        matrix[n*3] = [matrix[n*3], matrix[(n*3)+1], matrix[(n*3)+2]]
+        matrix[(n*3)+1] = ''
+        matrix[(n*3)+2] = ''
+    matrix[:] = [x for x in matrix if x]
+    for n in range(length):
+        matrix[n] = numpy.array(list(map(float, matrix[n])))
+    return matrix
+       
+def inertial(uncalibrated, misalignment, sensitivity, offset):
+    return (numpy.matrix(misalignment) * numpy.diag(sensitivity) * numpy.array([uncalibrated - offset]).T).A1
+
+def magnetic(uncalibrated, soft_iron_matrix, hard_iron_offset):
+    return (numpy.matrix(soft_iron_matrix) * numpy.array([uncalibrated] - hard_iron_offset).T).A1
+
+def get_matrix_vector(dir_name, sensor_type):
+    data_file = open(dir_name + "/output/" + sensor_type)
+    data_list = data_file.readlines()
+    matrix = data_list[3].split(' ') + data_list[4].split(' ') + data_list[5].split(' ')
+    for n in range(len(matrix)):
+        matrix[n] = matrix[n].replace('\n', '')
+        matrix[n] = matrix[n].replace(' ', '')
+    matrix[:] = [x for x in matrix if x]
+    matrix = datato_listarray(matrix,3)
+    vector = data_list[8].split('\n') + data_list[9].split('\n') + data_list[10].split('\n')
+    for n in range(len(vector)):
+        vector[n] = vector[n].replace('\n', '')
+        vector[n] = vector[n].replace(' ',' ')
+    vector[:] = [x for x in vector if x]
+    vector = numpy.array(list(map(float, vector)))
+    return matrix, vector
+    
+if (args_count := len(sys.argv)) > 2:
+    print(f"One argument expected, got {args_count - 1}")
+    raise SystemExit(2)
+elif args_count < 2:
+    print("You must specify the target file")
+    raise SystemExit(2)
+if not os.path.isfile(str(sys.argv[1])):
+    print("The target directory doesn't exist")
+    raise SystemExit(1)
+    
+target_file = str(sys.argv[1])
+
+data = numpy.genfromtxt(target_file, delimiter=",", skip_header=1)
+
 
 sample_rate = 100  # 100 Hz
 
+datadir_list = os.listdir("data")
+datadir_list.reverse()
+
+for n in datadir_list:
+    dir_name = "data/" + n
+    if os.path.isfile(dir_name + "/output/accel") and os.path.isfile(dir_name + "/output/gyro") and os.path.isfile(dir_name + "/output/mag"):
+        accelerometerMisalignment, accelerometerOffset = get_matrix_vector(dir_name, "accel")        
+        gyroscopeMisalignment, gyroscopeOffset = get_matrix_vector(dir_name, "gyro")
+        softIronMatrix, hardIronOffset = get_matrix_vector(dir_name, "mag")
+
+
 timestamp = data[:, 0]
-gyroscope = data[:, 1:4]
-accelerometer = data[:, 4:7]
+accelerometer = data[:, 1:4]
+gyroscope = data[:, 4:7]
 magnetometer = data[:, 7:10]
 
+gyroscopeSensitivity = [1, 1, 1]
+accelerometerSensitivity = [1, 1, 1]
+length = len(timestamp)
+
+gyroscope = inertial(gyroscope, gyroscopeMisalignment, gyroscopeSensitivity, gyroscopeOffset)
+accelerometer = inertial(accelerometer, accelerometerMisalignment, accelerometerSensitivity, accelerometerOffset)
+magnetometer = magnetic(magnetometer, softIronMatrix, hardIronOffset)
+gyroscope = gyroscope.tolist()
+accelerometer = accelerometer.tolist()
+magnetometer = magnetometer.tolist()
+gyroscope = datato_listarray(gyroscope,length)
+accelerometer = datato_listarray(accelerometer,length)
+magnetometer = datato_listarray(magnetometer,length)
+            
 # Instantiate algorithms
 offset = imufusion.Offset(sample_rate)
 ahrs = imufusion.Ahrs()
