@@ -26,7 +26,7 @@ def get_data(time, freq, datafile, label):
     new_entry = str(conn.recv(1024), "utf-8")
     while (new_entry != 'Ready for next instructions!' and valid_data(new_entry) == True):
         TIME.sleep(1/freq)
-        time = 0 + (1/freq)
+        time = time + (1/freq)
         print(time)
         data_list.append(new_entry)
         new_entry = str(conn.recv(1024), "utf-8")
@@ -96,7 +96,7 @@ def send_info():
     conn.sendall(bytes(str(freq) + "\n", "utf-8"))
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%Y_%H:%M")
-    datafile = "data/data" + data_string
+    datafile = "data/data" + dt_string
     label = 1
     get_data(time,freq,datafile,label)
     send_info()
