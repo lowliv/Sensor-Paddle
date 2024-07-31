@@ -6,9 +6,10 @@ name = "pypi"
 [packages]
 imufusion = "*"
 matplotlib = "*"
-numpy = "*"
+numpy = "==1.26.4"
 scipy = "*"
 meshcat = "*"
+pykalman = "*"
 
 [dev-packages]
 
