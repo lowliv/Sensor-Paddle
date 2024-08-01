@@ -4,7 +4,7 @@ import shutil
 import time as TIME
 from datetime import datetime
 
-HOST = "192.168.1.17"  # Standard loopback interface address (localhost)
+HOST = "192.168.81.134"  # Standard loopback interface address (localhost)
 PORT = 60321  # Port to listen on (non-privileged ports are > 1023)
 
 def valid_data(n):
