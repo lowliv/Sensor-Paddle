@@ -4,22 +4,35 @@ import numpy
 import sys
 import os
 from pykalman import KalmanFilter
+import time
 
-def datato_listarray(matrix,length):    
-    for n in range(length):
-        matrix[n*3] = [matrix[n*3], matrix[(n*3)+1], matrix[(n*3)+2]]
-        matrix[(n*3)+1] = ''
-        matrix[(n*3)+2] = ''
-    matrix[:] = [x for x in matrix if x]
-    for n in range(length):
-        matrix[n] = numpy.array(list(map(float, matrix[n])))
-    return matrix
-       
-def inertial(uncalibrated, misalignment, sensitivity, offset):
-    return (numpy.matrix(misalignment) * numpy.diag(sensitivity) * numpy.array([uncalibrated - offset]).T).A1
+if (args_count := len(sys.argv)) > 2:
+    print(f"One argument expected, got {args_count - 1}")
+    raise SystemExit(2)
+elif args_count < 2:
+    print("You must specify the target file")
+    raise SystemExit(2)
+if not os.path.isfile(str(sys.argv[1])):
+    print("The target directory doesn't exist")
+    raise SystemExit(1)
 
-def magnetic(uncalibrated, soft_iron_matrix, hard_iron_offset):
-    return (numpy.matrix(soft_iron_matrix) * numpy.array([uncalibrated] - hard_iron_offset).T).A1
+target_file = str(sys.argv[1])
+
+data = numpy.genfromtxt(target_file, delimiter=",", skip_header=1)
+
+
+sample_rate = 100  # 100 Hz
+
+def sortfunct(n):
+    return int(str(n[slice(23,27)])+str(n[slice(20,22)])+str(n[slice(17,19)])+str(n[slice(28,30)])+str(n[slice(31,33)]))
+    
+datadir_list = os.listdir("data")
+for n in datadir_list:
+    if "calibration" not in n:
+        datadir_list[:] = ["" if x==n else x for x in datadir_list]
+
+datadir_list[:] = [x for x in datadir_list if x]        
+datadir_list.sort(key=sortfunct,reverse=True)
 
 def get_matrix_vector(dir_name, sensor_type):
     data_file = open(dir_name + "/output/" + sensor_type)
@@ -37,34 +50,30 @@ def get_matrix_vector(dir_name, sensor_type):
     vector[:] = [x for x in vector if x]
     vector = numpy.array(list(map(float, vector)))
     return matrix, vector
+     
+def inertial(uncalibrated, misalignment, sensitivity, offset):
+    return (numpy.matrix(misalignment) * numpy.diag(sensitivity) * numpy.array([uncalibrated - offset]).T).A1
+
+def magnetic(uncalibrated, soft_iron_matrix, hard_iron_offset):
+    return (numpy.matrix(soft_iron_matrix) * numpy.array([uncalibrated] - hard_iron_offset).T).A1
+
+def datato_listarray(matrix,length):    
+    for n in range(length):
+        matrix[n*3] = [matrix[n*3], matrix[(n*3)+1], matrix[(n*3)+2]]
+        matrix[(n*3)+1] = ''
+        matrix[(n*3)+2] = ''
+    matrix[:] = [x for x in matrix if x]
+    for n in range(length):
+        matrix[n] = numpy.array(list(map(float, matrix[n])))
+    return matrix
     
-if (args_count := len(sys.argv)) > 2:
-    print(f"One argument expected, got {args_count - 1}")
-    raise SystemExit(2)
-elif args_count < 2:
-    print("You must specify the target file")
-    raise SystemExit(2)
-if not os.path.isfile(str(sys.argv[1])):
-    print("The target directory doesn't exist")
-    raise SystemExit(1)
-    
-target_file = str(sys.argv[1])
-
-data = numpy.genfromtxt(target_file, delimiter=",", skip_header=1)
-
-
-sample_rate = 100  # 100 Hz
-
-datadir_list = os.listdir("data")
-datadir_list.reverse()
-
 for n in datadir_list:
     dir_name = "data/" + n
     if os.path.isfile(dir_name + "/output/accel") and os.path.isfile(dir_name + "/output/gyro") and os.path.isfile(dir_name + "/output/mag"):
         accelerometerMisalignment, accelerometerOffset = get_matrix_vector(dir_name, "accel")        
         gyroscopeMisalignment, gyroscopeOffset = get_matrix_vector(dir_name, "gyro")
         softIronMatrix, hardIronOffset = get_matrix_vector(dir_name, "mag")
-
+        break        
 
 timestamp = data[:, 0]
 accelerometer = data[:, 1:4]
@@ -74,6 +83,7 @@ magnetometer = data[:, 7:10]
 gyroscopeSensitivity = [1, 1, 1]
 accelerometerSensitivity = [1, 1, 1]
 length = len(timestamp)
+freq = timestamp[1] - timestamp[0]
 
 gyroscope = inertial(gyroscope, gyroscopeMisalignment, gyroscopeSensitivity, gyroscopeOffset)
 accelerometer = inertial(accelerometer, accelerometerMisalignment, accelerometerSensitivity, accelerometerOffset)
@@ -100,12 +110,12 @@ ahrs.settings = imufusion.Settings(imufusion.CONVENTION_NWU,  # convention
 delta_time = numpy.diff(timestamp, prepend=timestamp[0])
 
 
-earth = numpy.empty((len(timestamp), 3))
-euler = numpy.empty((len(timestamp), 3))
-internal_states = numpy.empty((len(timestamp), 6))
-flags = numpy.empty((len(timestamp), 4))
+earth = numpy.empty((length, 3))
+euler = numpy.empty((length, 3))
+internal_states = numpy.empty((length, 6))
+flags = numpy.empty((length, 4))
 
-for index in range(len(timestamp)):
+for index in range(length):
     gyroscope[index] = offset.update(gyroscope[index])
 
     ahrs.update(gyroscope[index], accelerometer[index], magnetometer[index], delta_time[index])
@@ -128,67 +138,13 @@ for index in range(len(timestamp)):
                                 ahrs_flags.magnetic_recovery])
 
 
-# def plot_bool(axis, x, y, label):
-    # axis.plot(x, y, "tab:cyan", label=label)
-    # pyplot.sca(axis)
-    # pyplot.yticks([0, 1], ["False", "True"])
-    # axis.grid()
-    # axis.legend()
-
-
-# Plot Euler angles
-# figure, axes = pyplot.subplots(nrows=11, sharex=True, gridspec_kw={"height_ratios": [6, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1]})
-
-# figure.suptitle("Euler angles, internal states, and flags")
-
-#axes[0].plot(timestamp, euler[:, 0], "tab:red", label="Roll")
-#axes[0].plot(timestamp, euler[:, 1], "tab:green", label="Pitch")
-#axes[0].plot(timestamp, euler[:, 2], "tab:blue", label="Yaw")
-#axes[0].set_ylabel("Degrees")
-#axes[0].grid()
-#axes[0].legend()
-#
-## Plot initialising flag
-#plot_bool(axes[1], timestamp, flags[:, 0], "Initialising")
-#
-## Plot angular rate recovery flag
-#plot_bool(axes[2], timestamp, flags[:, 1], "Angular rate recovery")
-#
-## Plot acceleration rejection internal states and flag
-#axes[3].plot(timestamp, internal_states[:, 0], "tab:olive", label="Acceleration error")
-#axes[3].set_ylabel("Degrees")
-#axes[3].grid()
-#axes[3].legend()
-#
-#plot_bool(axes[4], timestamp, internal_states[:, 1], "Accelerometer ignored")
-#
-#axes[5].plot(timestamp, internal_states[:, 2], "tab:orange", label="Acceleration recovery trigger")
-#axes[5].grid()
-#axes[5].legend()
-#
-#plot_bool(axes[6], timestamp, flags[:, 2], "Acceleration recovery")
-#
-## Plot magnetic rejection internal states and flag
-#axes[7].plot(timestamp, internal_states[:, 3], "tab:olive", label="Magnetic error")
-#axes[7].set_ylabel("Degrees")
-#axes[7].grid()
-#axes[7].legend()
-#
-#plot_bool(axes[8], timestamp, internal_states[:, 4], "Magnetometer ignored")
-#
-#axes[9].plot(timestamp, internal_states[:, 5], "tab:orange", label="Magnetic recovery trigger")
-#axes[9].grid()
-#axes[9].legend()
-#
-#plot_bool(axes[10], timestamp, flags[:, 3], "Magnetic recovery")
-
 import numpy as np
 import pylab as pl
 from pykalman import KalmanFilter
 
 rot_pos = euler
-axi = ["position_x","position_y","position_z"]
-for n in range(len(axi)):
+pos= []
+for n in range(3):
     dt = timestamp[1] - timestamp[0]
     Acc_Variance = 0.00007
     # transition_matrix  
@@ -217,9 +173,7 @@ for n in range(len(axi)):
           [  0,    0,   Acc_Variance]]
 
     n_timesteps = length
-    print(earth)
     #earth = (np.delete(earth, 0, 0))
-    print(earth)
     observations = [value[n] for value in earth] 
     # create a Kalman Filter by hinting at the size of the state and observation
     # space.  If you already have good guesses for the initial parameters, put them
@@ -231,7 +185,6 @@ for n in range(len(axi)):
     # You can use the Kalman Filter immediately without fitting, but its estimates
     # may not be as good as if you fit first.
     states_pred = kf.em(observations).smooth(observations)[0]
-    print('fitted model: {0}'.format(kf))
     
     # Plot lines for the observations without noise, the estimated position of the
     # target before fitting, and the estimated position after fitting.
@@ -241,15 +194,8 @@ for n in range(len(axi)):
     position_line = pl.plot(timestamp, states_pred[:, -2],
                             linestyle='-', marker='o', color='r',
                             label='position est.')
-    axi[n] = np.array([states_pred[:, -2]])
-    print(axi[n])
-    a = np.array([[1, 2], [3, 4]])
-    b = np.array([[5, 6]])
-    print(b.shape)
-    print(rot_pos.shape)
-    print(axi[n].T.shape)
-    rot_pos = np.concatenate((rot_pos, axi[n].T), axis=1)
-    print(rot_pos)
+    pos.append(np.array([states_pred[:, -2]]))
+    rot_pos = np.concatenate((rot_pos, pos[n].T), axis=1)
 
     velocity_line = pl.plot(timestamp, states_pred[:, -1],
                             linestyle='-', marker='o', color='g',
@@ -291,20 +237,24 @@ ax.set_xlim([-2, 2])
 ax.set_ylim([-2, 2])
 ax.set_zlim([-2, 2])
 
-# define the animation function
-def rotate(rot_pos):
-    ax.clear()
-
-    ax.set_xlim([-1.5, 1.5])
-    ax.set_ylim([-1.5, 1.5])
-    ax.set_zlim([-1.5, 1.5])
-    rot_pos = list(rot_pos)
-    print(rot_pos)
+global speed_mult
+speed_mult = 2
+#def speed_up
+#    speed_mult = speed_mult+.1
+def keyactions(event):
+    global speed_mult
+    if event.key == '+':
+        speed_mult -= 0.1
+    if event.key == '-':
+        speed_mult += 0.1
+vertices_rot = []
+for n in range(len(rot_pos)):
+    rot_pos[n] = list(rot_pos[n])
     dtorads = np.pi*(1/180)
-    # rotate the vertices around the x and y axes
-    cx, sx = np.cos(dtorads*rot_pos[0]), np.sin(dtorads*rot_pos[0])
-    cy, sy = np.cos(dtorads*rot_pos[1]), np.sin(dtorads*rot_pos[1])
-    cz, sz = np.cos(dtorads*rot_pos[2]), np.sin(dtorads*rot_pos[2])
+    # rotate the vertices around the x,y,z axes
+    cx, sx = np.cos(dtorads*rot_pos[n][0]), np.sin(dtorads*rot_pos[n][0])
+    cy, sy = np.cos(dtorads*rot_pos[n][1]), np.sin(dtorads*rot_pos[n][1])
+    cz, sz = np.cos(dtorads*rot_pos[n][2]), np.sin(dtorads*rot_pos[n][2])
     rotx = np.array([[1, 0, 0],
                      [0, cx, -sx],
                      [0, sx, cx]])
@@ -316,17 +266,32 @@ def rotate(rot_pos):
                      [0, 0, 1]])
     lstvert = np.ndarray.tolist(vertices)
     for x in range(len(lstvert)):
-        lstvert[x][0] = lstvert[x][0] + rot_pos[3]
-        lstvert[x][1] = lstvert[x][1] + rot_pos[4]
-        lstvert[x][2] = lstvert[x][2] + rot_pos[5]
+        lstvert[x][0] = lstvert[x][0] + rot_pos[n][3]
+        lstvert[x][1] = lstvert[x][1] + rot_pos[n][4]
+        lstvert[x][2] = lstvert[x][2] + rot_pos[n][5]
     vertices_pos = np.array(lstvert)
-    vertices_rot = np.dot(rotz, (np.dot(roty, np.dot(rotx, vertices_pos.T)).T).T).T
-    # plot the rotated cube
+    vertices_rot.append(np.dot(rotz, (np.dot(roty, np.dot(rotx, vertices_pos.T)).T).T).T)
+    print(vertices_rot)
+# define the animation function
+def update(vertices_rot):
+    start = time.perf_counter()
+    ax.clear()
+    ax.set_xlim([-1.5, 1.5])
+    ax.set_ylim([-1.5, 1.5])
+    ax.set_zlim([-1.5, 1.5])
     for edge in edges:
         ax.plot3D(vertices_rot[edge, 0], vertices_rot[edge, 1], vertices_rot[edge, 2], 'blue')
-
+    cid = fig.canvas.mpl_connect('key_press_event', keyactions)
+    stop = time.perf_counter()
+    print(stop-start)
+    print(freq*speed_mult)
+    if freq*speed_mult > stop-start:
+        time.sleep((freq*speed_mult)-(stop-start))
+    else:
+        print("Frame was unable to be displayed in time")
+    
 # create the animation object
-anim = animation.FuncAnimation(fig, rotate, frames=(rot_pos), interval=100)
+anim = animation.FuncAnimation(fig, update, frames=(vertices_rot), interval=0)
 
 # show the plot
 plt.show()

@@ -10,6 +10,10 @@ numpy = "==1.26.4"
 scipy = "*"
 meshcat = "*"
 pykalman = "*"
+mayavi = "*"
+configobj = "*"
+pyqt5 = "*"
+vtk = "*"
 
 [dev-packages]
 

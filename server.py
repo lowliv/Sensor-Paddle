@@ -27,7 +27,7 @@ def get_data(time, freq, datafile, label):
     while (new_entry != 'Ready for next instructions!' and valid_data(new_entry) == True):
         TIME.sleep(1/freq)
         time = time + (1/freq)
-        print(time)
+        print("Recording")
         data_list.append(new_entry)
         new_entry = str(conn.recv(1024), "utf-8")
             
@@ -94,6 +94,7 @@ def send_info():
         while freq == 0:
             freq = int(input("How many data points per second should be recorded?\nInput:"))
     conn.sendall(bytes(str(freq) + "\n", "utf-8"))
+    print("Recording Started!")
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%Y_%H:%M")
     datafile = "data/data" + dt_string
