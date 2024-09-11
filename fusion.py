@@ -1,8 +1,9 @@
 import imufusion
 import matplotlib.pyplot as pyplot
-import numpy
+import numpy as np
 import sys
 import os
+import pylab as pl
 from pykalman import KalmanFilter
 import time
 
@@ -18,7 +19,7 @@ if not os.path.isfile(str(sys.argv[1])):
 
 target_file = str(sys.argv[1])
 
-data = numpy.genfromtxt(target_file, delimiter=",", skip_header=1)
+data = np.genfromtxt(target_file, delimiter=",", skip_header=1)
 
 
 sample_rate = 100  # 100 Hz
@@ -48,14 +49,14 @@ def get_matrix_vector(dir_name, sensor_type):
         vector[n] = vector[n].replace('\n', '')
         vector[n] = vector[n].replace(' ',' ')
     vector[:] = [x for x in vector if x]
-    vector = numpy.array(list(map(float, vector)))
+    vector = np.array(list(map(float, vector)))
     return matrix, vector
      
 def inertial(uncalibrated, misalignment, sensitivity, offset):
-    return (numpy.matrix(misalignment) * numpy.diag(sensitivity) * numpy.array([uncalibrated - offset]).T).A1
+    return (np.matrix(misalignment) * np.diag(sensitivity) * np.array([uncalibrated - offset]).T).A1
 
 def magnetic(uncalibrated, soft_iron_matrix, hard_iron_offset):
-    return (numpy.matrix(soft_iron_matrix) * numpy.array([uncalibrated] - hard_iron_offset).T).A1
+    return (np.matrix(soft_iron_matrix) * np.array([uncalibrated] - hard_iron_offset).T).A1
 
 def datato_listarray(matrix,length):    
     for n in range(length):
@@ -64,7 +65,7 @@ def datato_listarray(matrix,length):
         matrix[(n*3)+2] = ''
     matrix[:] = [x for x in matrix if x]
     for n in range(length):
-        matrix[n] = numpy.array(list(map(float, matrix[n])))
+        matrix[n] = np.array(list(map(float, matrix[n])))
     return matrix
     
 for n in datadir_list:
@@ -107,13 +108,13 @@ ahrs.settings = imufusion.Settings(imufusion.CONVENTION_NWU,  # convention
                                    5 * sample_rate)  # recovery trigger period = 5 seconds
 
 # Process sensor data
-delta_time = numpy.diff(timestamp, prepend=timestamp[0])
+delta_time = np.diff(timestamp, prepend=timestamp[0])
 
 
-earth = numpy.empty((length, 3))
-euler = numpy.empty((length, 3))
-internal_states = numpy.empty((length, 6))
-flags = numpy.empty((length, 4))
+earth = np.empty((length, 3))
+euler = np.empty((length, 3))
+internal_states = np.empty((length, 6))
+flags = np.empty((length, 4))
 
 for index in range(length):
     gyroscope[index] = offset.update(gyroscope[index])
@@ -124,7 +125,7 @@ for index in range(length):
     earth[index] = ahrs.earth_acceleration
     
     ahrs_internal_states = ahrs.internal_states
-    internal_states[index] = numpy.array([ahrs_internal_states.acceleration_error,
+    internal_states[index] = np.array([ahrs_internal_states.acceleration_error,
                                           ahrs_internal_states.accelerometer_ignored,
                                           ahrs_internal_states.acceleration_recovery_trigger,
                                           ahrs_internal_states.magnetic_error,
@@ -132,15 +133,10 @@ for index in range(length):
                                           ahrs_internal_states.magnetic_recovery_trigger])
 
     ahrs_flags = ahrs.flags
-    flags[index] = numpy.array([ahrs_flags.initialising,
+    flags[index] = np.array([ahrs_flags.initialising,
                                 ahrs_flags.angular_rate_recovery,
                                 ahrs_flags.acceleration_recovery,
                                 ahrs_flags.magnetic_recovery])
-
-
-import numpy as np
-import pylab as pl
-from pykalman import KalmanFilter
 
 rot_pos = euler
 pos= []
